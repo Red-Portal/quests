@@ -3,7 +3,18 @@
 
 void getTape(char*);
 
-int main(void)
+void cmd_createLabel(char*, int*, int*);
+void cmd_colon(char*, int*, int*);
+void cmd_plus(char*, int*, int*);
+void cmd_minus(char*, int*, int*);
+void cmd_division(char*, int*, int*);
+void cmd_multiply(char*, int*, int*);
+void cmd_condition(char*, int*, int*, int*);
+void cmd_print(char*, int*, int*);
+void cmd_assign(char*, int*, int*);
+
+int
+main(void)
 {
 	char tape[30];
 	getTape(tape);
@@ -14,147 +25,48 @@ int main(void)
 	int head = 0;
 	while (tape[head] != ';')
 	{
-		if (tape[head] == ':')  // if it is a colon, this is a label definition statement 
+		switch(tape[head])
 		{
-			int label = (int)tape[head + 1];
-			labels[label] = head + 2; // the position after the label is the start position of the label
+		case ':':
+			cmd_colon(tape, &head, labels);
+			break;
+		case '+':
+			cmd_plus(tape, &head, memory);
+			break;
+		case '-':
+			cmd_minus(tape, &head, memory);
+			break;
+		
+		case '*':
+			cmd_multiply(tape, &head, memory);
+			break;
 
-			head += 2;
-		}
+		case '/':
+			cmd_division(tape, &head, memory);
+			break;
 
-		else if (tape[head] == '+') // if this is a plus, this is an addition operation statement
-		{
-			char firstVar = tape[head + 1];
-			char secondVar = tape[head + 2];
+		case 'c':
+			cmd_condition(tape, &head, memory, labels);
+			break;
 
-			int firstData = memory[(int)firstVar];
-			int secondData;
+		case 'p':
+			cmd_print(tape, &head, memory);
+			break;
 
-			if ((int)secondVar - '0' > 10)
-				secondData = memory[(int)secondVar];
-			else
-				secondData = (int)secondVar - '0';
+		case '=':
+			cmd_assign(tape, &head, memory);
+			break;
 
-
-			memory[(int)firstVar] = firstData + secondData;
-
-			head += 3;
-		}
-
-		else if (tape[head] == '-') // if this is a minux, this is an substraction opertion statement
-		{
-			char firstVar = tape[head + 1];
-			char secondVar = tape[head + 2];
-
-			int firstData = memory[(int)firstVar];
-
-			int secondData;
-
-			if ((int)secondVar - '0' > 10)
-				secondData = memory[(int)secondVar];
-			else
-				secondData = (int)secondVar - '0';
-
-			memory[(int)firstVar] = firstData - secondData;
-
-			head += 3;
-		}
-
-		else if (tape[head] == '*') // if this is a asterix, this is a product operation statement
-		{
-			char firstVar = tape[head + 1];
-			char secondVar = tape[head + 2];
-
-			int firstData = memory[(int)firstVar];
-			int secondData;
-
-			if ((int)secondVar - '0' > 10)
-				secondData = memory[(int)secondVar];
-			else
-				secondData = (int)secondVar - '0';
-
-			memory[(int)firstVar] = firstData * secondData;
-
-			head += 3;
-		}
-
-		else if (tape[head] == '/') // if this is a slash, this is a division operation statement
-		{
-			char firstVar = tape[head + 1];
-			char secondVar = tape[head + 2];
-
-			int firstData = memory[(int)firstVar];
-			int secondData;
-
-			if ((int)secondVar - '0' > 10)
-				secondData = memory[(int)secondVar];
-			else
-				secondData = (int)secondVar - '0';
-
-			memory[(int)firstVar] = firstData / secondData;
-
-			head += 3;
-		}
-
-		else if (tape[head] == 'c') // if this is a c, this is a conditional operation statement
-		{
-			char condition = tape[head + 1];
-			char trueLabel = tape[head + 2];
-			char falseLabel = tape[head + 3];
-
-			int condInt = memory[(int)condition];
-
-			if (condInt == 0)
-			{
-				if (labels[(int)falseLabel] != 0)
-					head = labels[(int)falseLabel];
-				else
-				{
-					int i = 1;
-					while (tape[head + i] != falseLabel)
-						++i;
-
-					head += i + 1;
-				}
-			}
-			else
-			{
-				if (labels[(int)trueLabel] != 0)
-					head = labels[(int)trueLabel];
-				else
-				{
-					int i = 1;
-					while (tape[head + i] != trueLabel)
-						++i;
-
-					head += i + 1;
-				}
-			}
-		}
-
-		else if (tape[head] == 'p') // if this is a p, this is a print statement
-		{
-			char var = tape[head + 1];
-			printf("output: %d\n", memory[(int)var]);
-			head += 2;
-		}
-
-		else if (tape[head] == '=') // if this is an equal, this is an assignment statement
-		{
-			char varName = tape[head + 1];
-			char data = tape[head + 2];
-
-			memory[(int)varName] = (int)data - (int)'0';
-			head += 3;
-		}
-		else
+		default:
 			printf("unknown command '%c' error!\n", tape[head]);
-
+			break;
+		}
 	}
 	return 0;
 }
 
-void getTape(char* tape)
+void
+getTape(char* tape)
 {
 	printf("Enter tape\n");
 
@@ -165,4 +77,149 @@ void getTape(char* tape)
 		scanf(" %c", &current);
 		tape[i] = current;
 	}
+}
+
+void
+cmd_colon(char* tape, int* head, int* labels)
+{
+	int index = (int)tape[*head + 1];
+	labels[index] = *head + 2;
+
+	*head += 2;
+}
+
+void
+cmd_plus(char* tape, int* head, int* memory)
+{
+	int first = (int)tape[*head + 1];
+	int second = (int)tape[*head + 2];
+
+	int firstData = memory[first];
+	int secondData;
+
+	// this is checking wether the second argument is a literal
+	// or a variable
+	if(second - (int)'0' > 10) 
+		secondData = memory[second];
+	else
+		secondData = second - (int)'0';
+
+	memory[first] = firstData + secondData;
+	*head += 3;
+}
+
+void
+cmd_minus(char* tape, int* head, int* memory)
+{
+	int first = (int)tape[*head + 1];
+	int second = (int)tape[*head + 2];
+
+	int firstData = memory[first];
+	int secondData;
+
+	// this is checking wether the second argument is a literal
+	// or a variable
+	if(second - (int)'0' > 10) 
+		secondData = memory[second];
+	else
+		secondData = second - (int)'0';
+
+	memory[first] = firstData - secondData;
+	*head += 3;
+}
+
+void
+cmd_division(char* tape, int* head, int* memory)
+{
+	int first = (int)tape[*head + 1];
+	int second = (int)tape[*head + 2];
+
+	int firstData = memory[first];
+	int secondData;
+
+	// this is checking wether the second argument is a literal
+	// or a variable
+	if(second - (int)'0' > 10) 
+		secondData = memory[second];
+	else
+		secondData = second - (int)'0';
+
+	memory[first] = firstData / secondData;
+	*head += 3;
+}
+
+void
+cmd_multiply(char* tape, int* head, int* memory)
+{
+	int first = (int)tape[*head + 1];
+	int second = (int)tape[*head + 2];
+
+	int firstData = memory[first];
+	int secondData;
+
+	// this is checking wether the second argument is a literal
+	// or a variable
+	if(second - (int)'0' > 10) 
+		secondData = memory[second];
+	else
+		secondData = second - (int)'0';
+
+	memory[first] = firstData * secondData;
+	*head += 3;
+}
+
+void
+cmd_condition(char* tape, int* head, int* memory, int* labels)
+{
+	
+	//the variable containing the condition
+	int condVar = (int)tape[*head + 1]; 
+
+	int trueLabel = (int)tape[*head + 2]; 
+	int falseLabel = (int)tape[*head + 3];
+
+	int cond = memory[condVar];
+
+	if(cond == 0)
+	{
+		if(labels[falseLabel] != 0)
+			*head = labels[(int) falseLabel];
+		else
+		{
+			int i = 1;
+			while(tape[*head + i] != falseLabel)
+				++i;
+			*head += i + 1;
+		}
+	}
+	else
+	{
+		if(labels[trueLabel] != 0)
+		*head = labels[(int) trueLabel];
+		else
+		{
+			int i = 1;
+			while(tape[*head + i] != trueLabel)
+				++i;
+			*head += i + 1;
+		}
+	}
+}
+
+void
+cmd_print(char* tape, int* head, int* memory)
+{
+	int idx = tape[*head + 1];
+	printf("output: %d\n", memory[idx]);
+	*head += 2;
+}
+
+void
+cmd_assign(char* tape, int* head, int* memory)
+{
+	int name = tape[*head + 1];
+	int data = (int)tape[*head + 2] - (int)'0';
+
+	memory[name] = data;
+	head += 3;
 }
